@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drop Rate Calculator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 10px;
+            background-color: #f4f4f4;
+        }
+        .calculator {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+            font-size: 20px;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        input[type="checkbox"] {
+            width: auto;
+            margin-right: 5px;
+        }
+        .hint {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+        #results, #warnings {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        .warning {
+            color: #e74c3c;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .result-item {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .result-item strong {
+            color: #2980b9;
+        }
+        @media (max-width: 480px) {
+            input, select {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1>Drop Rate Calculator</h1>
+        <form id="calculatorForm">
+            <label for="baseDrop">Base Drop Rate (at Stasis 2):</label>
+            <input type="text" id="baseDrop" value="0.05%" required>
+            <div class="hint">Enter the percentage (e.g., 0.05% or 1%)</div>
+
+            <label for="prospection">Prospection:</label>
+            <input type="number" id="prospection" min="0" max="200" value="0" required>
+            <div class="hint">Enter a value between 0 and 200</div>
+
+            <label for="stasisLevel">Stasis Level:</label>
+            <select id="stasisLevel" required>
+                <option value="0.6">1 (60%)</option>
+                <option value="1.0" selected>2 (100%)</option>
+                <option value="1.4">3 (140%)</option>
+                <option value="2.5">4 (250%)</option>
+                <option value="4.0">5 (400%)</option>
+                <option value="5.5">6 (550%)</option>
+                <option value="6.0">7 (600%)</option>
+                <option value="6.5">8 (650%)</option>
+                <option value="6.8">9 (680%)</option>
+                <option value="7.1">10 (710%)</option>
+            </select>
+
+            <label for="boosterPack">Booster Pack:</label>
+            <select id="boosterPack" required>
+                <option value="1">None</option>
+                <option value="1.25">Pandora (25%)</option>
+                <option value="1.5">Ogrest (50%)</option>
+            </select>
+
+            <label>
+                <input type="checkbox" id="lootPotion">
+                Loot Potion (50%)
+            </label>
+
+            <label for="demonicPact">Demonic Pact:</label>
+            <select id="demonicPact" required>
+                <option value="0">None</option>
+                <option value="0.25">25%</option>
+                <option value="0.5">50%</option>
+            </select>
+
+            <label for="combatDuration">Average Combat Duration (minutes):</label>
+            <input type="number" id="combatDuration" step="0.1" min="0">
+            <div class="hint">Optional</div>
+        </form>
+
+        <div id="warnings"></div>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('calculatorForm');
+        const inputs = form.querySelectorAll('input, select');
+
+        inputs.forEach(input => {
+            input.addEventListener('input', calculateDropRate);
+        });
+
+        function parsePercentage(value) {
+            const parsedValue = parseFloat(value.replace('%', ''));
+            return isNaN(parsedValue) ? 0 : parsedValue / 100;
+        }
+
+        function formatTime(minutes) {
+            if (isNaN(minutes) || minutes < 0) return 'Invalid time';
+            if (minutes < 1) {
+                return `${Math.round(minutes * 60)} seconds`;
+            } else if (minutes < 60) {
+                return `${minutes.toFixed(1)} minutes`;
+            } else if (minutes < 1440) {
+                const hours = Math.floor(minutes / 60);
+                const mins = Math.round(minutes % 60);
+                return `${hours} hour${hours !== 1 ? 's' : ''} ${mins} minute${mins !== 1 ? 's' : ''}`;
+            } else if (minutes < 10080) {
+                const days = Math.floor(minutes / 1440);
+                const hours = Math.floor((minutes % 1440) / 60);
+                return `${days} day${days !== 1 ? 's' : ''} ${hours} hour${hours !== 1 ? 's' : ''}`;
+            } else {
+                const weeks = Math.floor(minutes / 10080);
+                const days = Math.floor((minutes % 10080) / 1440);
+                return `${weeks} week${weeks !== 1 ? 's' : ''} ${days} day${days !== 1 ? 's' : ''}`;
+            }
+        }
+
+        function calculateDropRate() {
+            const warnings = [];
+            const baseDrop = parsePercentage(document.getElementById('baseDrop').value);
+            const prospection = parseFloat(document.getElementById('prospection').value);
+            const stasisLevel = parseFloat(document.getElementById('stasisLevel').value);
+            const boosterPack = parseFloat(document.getElementById('boosterPack').value);
+            const lootPotion = document.getElementById('lootPotion').checked ? 0.5 : 0;
+            const demonicPact = parseFloat(document.getElementById('demonicPact').value);
+            const combatDuration = parseFloat(document.getElementById('combatDuration').value);
+
+            if (baseDrop <= 0 || baseDrop > 1) {
+                warnings.push("Base Drop Rate should be a valid percentage between 0% and 100%.");
+            }
+
+            if (isNaN(prospection) || prospection < 0 || prospection > 200) {
+                warnings.push("Prospection should be between 0 and 200.");
+            }
+
+            document.getElementById('warnings').innerHTML = warnings.map(w => `<p class="warning">${w}</p>`).join('');
+
+            const dropRate = baseDrop * stasisLevel * boosterPack * (1 + (prospection / 100)) * (1 + lootPotion + demonicPact);
+            const averageAttempts = Math.ceil(1 / dropRate);
+            const worstCaseAttempts = Math.ceil(Math.log(0.001) / Math.log(1 - dropRate)); // 99.9% chance
+
+            let resultsHTML = `
+                <h2>Results</h2>
+                <div class="result-item">
+                    <strong>Final Drop Rate:</strong> ${(dropRate * 100).toFixed(4)}%
+                </div>
+                <div class="result-item">
+                    <strong>Average:</strong> ${averageAttempts} attempts`;
+
+            if (!isNaN(combatDuration) && combatDuration > 0) {
+                resultsHTML += ` (${formatTime(averageAttempts * combatDuration)})`;
+            }
+
+            resultsHTML += `</div><div class="result-item">
+                <strong>Worst case (99.9% chance):</strong> ${worstCaseAttempts} attempts`;
+
+            if (!isNaN(combatDuration) && combatDuration > 0) {
+                resultsHTML += ` (${formatTime(worstCaseAttempts * combatDuration)})`;
+            }
+
+            resultsHTML += '</div>';
+
+            document.getElementById('results').innerHTML = resultsHTML;
+        }
+
+        // Initial calculation
+        calculateDropRate();
+    </script>
+</body>
+</html>
