@@ -3,33 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drop Rate Calculator</title>
+    <title>Wakfu Drop Rate Calculator</title>
     <style>
-        * {
-            box-sizing: border-box;
-        }
         body {
             font-family: Arial, sans-serif;
             line-height: 1.6;
             color: #333;
-            margin: 0;
+            max-width: 600px;
+            margin: 0 auto;
             padding: 10px;
             background-color: #f4f4f4;
+            transition: background-color 0.3s, color 0.3s;
         }
         .calculator {
             background-color: #fff;
             border-radius: 8px;
             padding: 15px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            max-width: 600px;
-            margin: 0 auto;
+            transition: background-color 0.3s, box-shadow 0.3s;
         }
-        h1, h2 {
+        h1 {
             color: #2c3e50;
             text-align: center;
-            font-size: 20px;
+            font-size: 24px;
             margin-top: 0;
-            margin-bottom: 15px;
         }
         label {
             display: block;
@@ -42,7 +39,10 @@
             margin-top: 5px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 16px;
+            box-sizing: border-box;
+            background-color: #fff;
+            color: #333;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
         }
         input[type="checkbox"] {
             width: auto;
@@ -61,28 +61,82 @@
         .warning {
             color: #e74c3c;
             font-weight: bold;
-            font-size: 14px;
         }
         .result-item {
             background-color: #f8f9fa;
             padding: 10px;
             border-radius: 4px;
             margin-bottom: 10px;
+            transition: background-color 0.3s;
         }
         .result-item strong {
             color: #2980b9;
         }
-        @media (max-width: 480px) {
-            input, select {
-                font-size: 14px;
-            }
+        .dark-mode-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+        .dark-mode-toggle input {
+            display: none;
+        }
+        .dark-mode-toggle label {
+            cursor: pointer;
+            padding: 5px 10px;
+            background-color: #ddd;
+            border-radius: 15px;
+            transition: background-color 0.3s;
+        }
+        .dark-mode-toggle input:checked + label {
+            background-color: #2980b9;
+            color: #fff;
+        }
+        body.dark-mode {
+            background-color: #1a1a1a;
+            color: #f4f4f4;
+        }
+        body.dark-mode .calculator {
+            background-color: #2c2c2c;
+            box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+        }
+        body.dark-mode h1 {
+            color: #f4f4f4;
+        }
+        body.dark-mode input, body.dark-mode select {
+            background-color: #3a3a3a;
+            color: #f4f4f4;
+            border-color: #555;
+        }
+        body.dark-mode .hint {
+            color: #aaa;
+        }
+        body.dark-mode .result-item {
+            background-color: #3a3a3a;
+        }
+        body.dark-mode .result-item strong {
+            color: #64b5f6;
         }
     </style>
 </head>
 <body>
+    <div class="dark-mode-toggle">
+        <input type="checkbox" id="darkModeToggle">
+        <label for="darkModeToggle">🌓</label>
+    </div>
     <div class="calculator">
-        <h1>Drop Rate Calculator</h1>
+        <h1>Wakfu Drop Rate Calculator</h1>
         <form id="calculatorForm">
+            <label for="characterCount">Number of Characters:</label>
+            <select id="characterCount" required>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+            </select>
+
             <label for="baseDrop">Base Drop Rate (at Stasis 2):</label>
             <input type="text" id="baseDrop" value="0.05%" required>
             <div class="hint">Enter the percentage (e.g., 0.05% or 1%)</div>
@@ -169,6 +223,7 @@
 
         function calculateDropRate() {
             const warnings = [];
+            const characterCount = parseInt(document.getElementById('characterCount').value);
             const baseDrop = parsePercentage(document.getElementById('baseDrop').value);
             const prospection = parseFloat(document.getElementById('prospection').value);
             const stasisLevel = parseFloat(document.getElementById('stasisLevel').value);
@@ -187,14 +242,19 @@
 
             document.getElementById('warnings').innerHTML = warnings.map(w => `<p class="warning">${w}</p>`).join('');
 
-            const dropRate = baseDrop * stasisLevel * boosterPack * (1 + (prospection / 100)) * (1 + lootPotion + demonicPact);
-            const averageAttempts = Math.ceil(1 / dropRate);
-            const worstCaseAttempts = Math.ceil(Math.log(0.001) / Math.log(1 - dropRate)); // 99.9% chance
+            const singleCharDropRate = baseDrop * stasisLevel * boosterPack * (1 + (prospection / 100)) * (1 + lootPotion + demonicPact);
+            const groupDropRate = 1 - Math.pow(1 - singleCharDropRate, characterCount);
+
+            const averageAttempts = Math.ceil(1 / groupDropRate);
+            const worstCaseAttempts = Math.ceil(Math.log(0.001) / Math.log(1 - groupDropRate)); // 99.9% chance
 
             let resultsHTML = `
-                <h2>Results</h2>
+                <h2>Results (${characterCount} character${characterCount > 1 ? 's' : ''})</h2>
                 <div class="result-item">
-                    <strong>Final Drop Rate:</strong> ${(dropRate * 100).toFixed(4)}%
+                    <strong>Single Character Drop Rate:</strong> ${(singleCharDropRate * 100).toFixed(4)}%
+                </div>
+                <div class="result-item">
+                    <strong>Group Drop Rate:</strong> ${(groupDropRate * 100).toFixed(4)}%
                 </div>
                 <div class="result-item">
                     <strong>Average:</strong> ${averageAttempts} attempts`;
@@ -214,6 +274,14 @@
 
             document.getElementById('results').innerHTML = resultsHTML;
         }
+
+        // Dark mode toggle functionality
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const body = document.body;
+
+        darkModeToggle.addEventListener('change', () => {
+            body.classList.toggle('dark-mode');
+        });
 
         // Initial calculation
         calculateDropRate();
