@@ -242,7 +242,8 @@
 
             document.getElementById('warnings').innerHTML = warnings.map(w => `<p class="warning">${w}</p>`).join('');
 
-            const singleCharDropRate = baseDrop * stasisLevel * boosterPack * (1 + (prospection / 100)) * (1 + lootPotion + demonicPact);
+            const dropBonus = lootPotion + (stasisLevel - 1) + demonicPact;
+            const singleCharDropRate = baseDrop * boosterPack * (1 + (prospection / 100)) * (1 + dropBonus);
             const groupDropRate = 1 - Math.pow(1 - singleCharDropRate, characterCount);
 
             const averageAttempts = Math.ceil(1 / groupDropRate);
